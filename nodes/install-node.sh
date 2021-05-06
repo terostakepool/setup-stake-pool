@@ -31,10 +31,6 @@ fnInitSetup() {
     passwd ${SYSUSER}
 
     echo export TRANSFER_HOME=/home/${SYSUSER} >> ${HOME}/.profile
-
-    # Fix for git
-    git config --global http.postBuffer 500M
-    git config --global http.maxRequestBuffer 100M
     
     # Remove lxd prevent privilege escalation
     snap remove lxd
@@ -49,6 +45,10 @@ fnInitSetup() {
     apt-get clean autoclean && \
     rm -fr /var/lib/apt/lists/{apt,dpkg,cache,log} /tmp/* /var/tmp/*
     
+    # Fix for git
+    git config --global http.postBuffer 500M
+    git config --global http.maxRequestBuffer 100M
+
     # Config: fail2ban
     cp files/jail.local /etc/fail2ban/jail.local
     sed -i "s/port = ssh/port = ${SSH_PORT}/" /etc/fail2ban/jail.local
@@ -57,7 +57,17 @@ fnInitSetup() {
     systemctl restart fail2ban.service
     # fail2ban-client status || true
     
-    # Config: sshd
+    # Config: new user sshd
+    adduser ${NEW_SYSUSER}
+    usermod -aG sudo ${NEW_SYSUSER}
+    mkdir -p /home/${NEW_SYSUSER}/.ssh/
+    chmod 700 /home/${NEW_SYSUSER}/.ssh/
+    # copy current authorized_keys to new user
+    cp ~/.ssh/authorized_keys /home/${NEW_SYSUSER}/.ssh/authorized_keys
+    chmod 600 /home/${NEW_SYSUSER}/.ssh/authorized_keys
+    chown -R ${NEW_SYSUSER}:${NEW_SYSUSER} /home/${NEW_SYSUSER}/.ssh/
+
+
     cp /etc/ssh/sshd_config /etc/ssh/sshd_config_backup
     cp files/sshd_config /etc/ssh/sshd_config
     sed -i "s/#Port 22/Port ${SSH_PORT}/" /etc/ssh/sshd_config
@@ -170,7 +180,7 @@ fnInstallNode() {
     mkdir -p ${HOTKEY_PATH}
     mkdir -p ${TX_RAW_PATH}
 
-    echo export PS1="\u@\[\e[0;93m\]${$NODE_TYPE}\[\e[0m\]:\[$(tput sgr0)\]\[\033[38;5;6m\][\w]\[$(tput sgr0)\]: \[$(tput sgr0)\]" >> ${HOME}/.bashrc
+    echo export PS1="\u@\[\e[0;93m\]${NODE_TYPE}\[\e[0m\]:\[$(tput sgr0)\]\[\033[38;5;6m\][\w]\[$(tput sgr0)\]: \[$(tput sgr0)\]" >> ${HOME}/.bashrc
     source ${HOME}/.bashrc
 
     echo export CNODE_PORT=${CNODE_PORT} >> ${HOME}/.profile

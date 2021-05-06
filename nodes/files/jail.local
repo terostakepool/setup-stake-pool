@@ -9,7 +9,7 @@ port = ssh
 banaction = ufw[application="OpenSSH", blocktype=reject]
 filter = sshd
 logpath = /var/log/auth.log tail
-backend = systemd
+backend = auto
 
 [ssh-ddos]
 enabled = true
