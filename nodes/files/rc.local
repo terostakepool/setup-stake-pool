@@ -1,0 +1,8 @@
+#!/bin/bash
+
+# Give CPU startup routines time to settle.
+sleep 120
+
+sysctl -p /etc/sysctl.conf
+
+exit 0

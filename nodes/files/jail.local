@@ -1,0 +1,19 @@
+[DEFAULT]
+bantime = 1w
+findtime = 240m
+maxretry = 2
+
+[sshd]
+enabled = true
+port = ssh
+banaction = ufw[application="OpenSSH", blocktype=reject]
+filter = sshd
+logpath = /var/log/auth.log tail
+backend = systemd
+
+[ssh-ddos]
+enabled = true
+port = ssh
+banaction = ufw[application="OpenSSH", blocktype=reject]
+filter = sshd-ddos
+logpath = /var/log/auth.log tail

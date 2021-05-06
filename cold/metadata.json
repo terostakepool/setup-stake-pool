@@ -1,0 +1,7 @@
+{
+"name": "MyPoolName",
+"description": "My pool description",
+"ticker": "MPN",
+"homepage": "https://www.example.com/",
+"extended": "https://www.example.com/extended.json"
+}
