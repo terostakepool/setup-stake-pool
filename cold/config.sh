@@ -1,8 +1,6 @@
 #!/bin/bash
 set -e
 
-######## START CHANGE VALUES #########
-
 # Create a 24-word length shelley compatible mnemonic with Daedalus or Yoroi on a offline machine preferred.
 export MNEMONIC="example example example example example example example example example example example example example example example example example example example example example example example example"
 
@@ -18,7 +16,9 @@ export PLEDGE=1000000000
 export RELAY_HOST=relaynode1.example.com
 export RELAY_PORT=6000
 
-######## END CHANGE VALUES #########
+######################################
+# Do NOT modify code below           #
+######################################
 
 if [ "$NETWORK" != "testnet" ] && [ "$NODE_TYPE" != "mainnet" ]; then
     echo "Invalid: $NETWORK choose testnet or mainnet"$'\n'
@@ -213,11 +213,11 @@ EOF
 		$MAGIC > base.addr
 
 # Fix: add newline at end of file
-sed -e '$a\' base.addr_candidate > base.addr_compare
+sed -i -e '\$a\\' base.addr_candidate
 
-echo "Important the base.addr and the base.addr_compare must be the same"
-diff -s base.addr base.addr_compare
-cat base.addr base.addr_compare
+echo "Important the base.addr and the base.addr_candidate must be the same"
+diff -s base.addr base.addr_candidate
+cat base.addr base.addr_candidate
 
 popd >/dev/null
 HERE

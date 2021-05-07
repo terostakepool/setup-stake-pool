@@ -22,6 +22,10 @@ fnInitSetup() {
     SYSUSER=${SYSUSER:-"ubuntu"}
     echo ${SYSUSER}
 
+    read -p "New user ssh [pepe]: " NEW_SYSUSER
+    NEW_SYSUSER=${NEW_SYSUSER:-"pepe"}
+    echo ${NEW_SYSUSER}
+
     read -p "Enter ssh port [22]: " SSH_PORT
     SSH_PORT=${SSH_PORT:-"22"}
     echo ${SSH_PORT}
@@ -30,10 +34,12 @@ fnInitSetup() {
     echo "Enter new password for the user ${SYSUSER}"
     passwd ${SYSUSER}
 
-    echo export TRANSFER_HOME=/home/${SYSUSER} >> ${HOME}/.profile
+    echo export TRANSFER_HOME=/home/${NEW_SYSUSER} >> ${HOME}/.profile
     
     # Remove lxd prevent privilege escalation
-    snap remove lxd
+    if which snap >/dev/null; then
+        snap remove lxd
+    fi
     
     # APT dependencies
     apt-get update && apt-get install -y locales && \
@@ -62,12 +68,11 @@ fnInitSetup() {
     usermod -aG sudo ${NEW_SYSUSER}
     mkdir -p /home/${NEW_SYSUSER}/.ssh/
     chmod 700 /home/${NEW_SYSUSER}/.ssh/
-    # copy current authorized_keys to new user
+    # Copy current authorized_keys to new user
     cp ~/.ssh/authorized_keys /home/${NEW_SYSUSER}/.ssh/authorized_keys
     chmod 600 /home/${NEW_SYSUSER}/.ssh/authorized_keys
     chown -R ${NEW_SYSUSER}:${NEW_SYSUSER} /home/${NEW_SYSUSER}/.ssh/
-
-
+    # Config: sshd_config
     cp /etc/ssh/sshd_config /etc/ssh/sshd_config_backup
     cp files/sshd_config /etc/ssh/sshd_config
     sed -i "s/#Port 22/Port ${SSH_PORT}/" /etc/ssh/sshd_config
@@ -158,6 +163,7 @@ fnInstallNode() {
         ufw limit proto tcp from any to any port ${SSH_PORT}
         ufw allow ${CNODE_PORT}/tcp
     else
+        # TODO: Ask if you want to add another relay
         read -p "Enter relay ip: " RELAY_IP
         RELAY_IP=${RELAY_IP:-"127.0.0.1"}
         echo ${RELAY_IP}
@@ -179,9 +185,6 @@ fnInstallNode() {
     mkdir -p ${CNODE_HOME}
     mkdir -p ${HOTKEY_PATH}
     mkdir -p ${TX_RAW_PATH}
-
-    echo export PS1="\u@\[\e[0;93m\]${NODE_TYPE}\[\e[0m\]:\[$(tput sgr0)\]\[\033[38;5;6m\][\w]\[$(tput sgr0)\]: \[$(tput sgr0)\]" >> ${HOME}/.bashrc
-    source ${HOME}/.bashrc
 
     echo export CNODE_PORT=${CNODE_PORT} >> ${HOME}/.profile
     echo export NETWORK=${NETWORK} >> ${HOME}/.profile
@@ -268,8 +271,8 @@ fnInstallNode() {
     wget -N https://hydra.iohk.io/build/${CNODE_BUILD_NUM}/download/1/${NETWORK}-shelley-genesis.json && \
     wget -N https://hydra.iohk.io/build/${CNODE_BUILD_NUM}/download/1/${NETWORK}-config.json && \
     sed -i ${CNODE_HOME}/${NETWORK}-config.json -e "s/TraceBlockFetchDecisions\": false/TraceBlockFetchDecisions\": true/g"
-    sed -i ${CNODE_HOME}/${NETWORK}-config.json -e "s/\"minSeverity\": \"Info\"/\"minSeverity\": \"Error\"/g"
-    
+    #sed -i ${CNODE_HOME}/${NETWORK}-config.json -e "s/\"minSeverity\": \"Info\"/\"minSeverity\": \"Error\"/g"
+
     GEN_FILE=${CNODE_HOME}/${NETWORK}-shelley-genesis.json
     echo export GEN_FILE=${GEN_FILE} >> ${HOME}/.profile
     source ${HOME}/.profile
@@ -337,14 +340,16 @@ EOF
     systemctl enable cardano-node
     systemctl start cardano-node
     
-    # gLiveView
+    # gLiveView: https://github.com/cardano-community/guild-operators/blob/master/docs/Scripts/gliveview.md
     cd ${CNODE_HOME} && \
-    curl -s -o gLiveView.sh https://raw.githubusercontent.com/cardano-community/guild-operators/master/scripts/cnode-helper-scripts/gLiveView.sh && \
-    curl -s -o env https://raw.githubusercontent.com/cardano-community/guild-operators/master/scripts/cnode-helper-scripts/env && \
+    cp files/gLiveView.sh ${CNODE_HOME}/gLiveView.sh  && \
+    cp files/env ${CNODE_HOME}/env  && \
     chmod 755 gLiveView.sh && \
     sed -i env \
     -e "s/\#CONFIG=\"\${CNODE_HOME}\/files\/config.json\"/CONFIG=\"\${CNODE_HOME}\/\${NETWORK}-config.json\"/g" \
-    -e "s/\#SOCKET=\"\${CNODE_HOME}\/sockets\/node0.socket\"/SOCKET=\"\${CNODE_HOME}\/db\/socket\"/g"
+    -e "s/\#SOCKET=\"\${CNODE_HOME}\/sockets\/node0.socket\"/SOCKET=\"\${CNODE_HOME}\/db\/socket\"/g" \
+    -e "s/\#TOPOLOGY=\"\${CNODE_HOME}\/files\/topology.json\"/TOPOLOGY=\"\${CNODE_HOME}\/\${NETWORK}-topology.json\"/g" \
+    -e "s/\CNODE_PORT=\"6000\"/CNODE_PORT=\"\${CNODE_PORT}\"/g"
     
     # Clear temp
     rm -fr /var/lib/apt/lists/{apt,dpkg,cache,log} /tmp/* /var/tmp/*
