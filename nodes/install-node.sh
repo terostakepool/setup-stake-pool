@@ -18,7 +18,7 @@ fnInitSetup() {
     ZRAM=${ZRAM:-"512"}
     echo ${ZRAM}
     
-    read -p "Default AWS user [ubuntu]: " SYSUSER
+    read -p "Default user ssh [ubuntu]: " SYSUSER
     SYSUSER=${SYSUSER:-"ubuntu"}
     echo ${SYSUSER}
 
@@ -26,7 +26,7 @@ fnInitSetup() {
     NEW_SYSUSER=${NEW_SYSUSER:-"pepe"}
     echo ${NEW_SYSUSER}
 
-    read -p "Enter ssh port [22]: " SSH_PORT
+    read -p "Enter NEW ssh port [22]: " SSH_PORT
     SSH_PORT=${SSH_PORT:-"22"}
     echo ${SSH_PORT}
 
@@ -34,7 +34,7 @@ fnInitSetup() {
     echo "Enter new password for the user ${SYSUSER}"
     passwd ${SYSUSER}
 
-    echo export TRANSFER_HOME=/home/${NEW_SYSUSER} >> ${HOME}/.profile
+    echo export TRANSFER_HOME=/home/${NEW_SYSUSER} >> ${HOME}/.bashrc
     
     # Remove lxd prevent privilege escalation
     if which snap >/dev/null; then
@@ -61,7 +61,7 @@ fnInitSetup() {
 
     systemctl enable fail2ban
     systemctl restart fail2ban.service
-    # fail2ban-client status || true
+    # (Problems when running from the bash script): fail2ban-client status
     
     # Config: new user sshd
     adduser ${NEW_SYSUSER}
@@ -92,7 +92,10 @@ fnInitSetup() {
     mkswap /swapfile
     swapon /swapfile
     swapon --show
-    sed -i "s/defaults,discard/noatime,nodelalloc,barrier=0,i_version,commit=30,inode_readahead_blks=64,rw,errors=remount-ro/" /etc/fstab
+    
+    # TODO: It requires knowing the value to replace. Find a way to get it from /etc/fstab
+    # sed -i "s/defaults,discard/noatime,nodelalloc,barrier=0,i_version,commit=30,inode_readahead_blks=64,rw,errors=remount-ro/" /etc/fstab
+    
     echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
     # Validate fstab
     mount -a
@@ -124,6 +127,7 @@ fnInitSetup() {
 }
 
 fnInstallNode() {
+    echo "Install node"
 
     while true ; do
         read -p "Enter NETWORK (testnet|mainnet): " NETWORK
@@ -186,17 +190,17 @@ fnInstallNode() {
     mkdir -p ${HOTKEY_PATH}
     mkdir -p ${TX_RAW_PATH}
 
-    echo export CNODE_PORT=${CNODE_PORT} >> ${HOME}/.profile
-    echo export NETWORK=${NETWORK} >> ${HOME}/.profile
-    echo export NODE_TYPE=${NODE_TYPE} >> ${HOME}/.profile
-    echo export POOL_NAME=${POOL_NAME} >> ${HOME}/.profile
-    echo export WORKSPACE=${WORKSPACE} >> ${HOME}/.profile
-    echo export CNODE_HOME=${CNODE_HOME} >> ${HOME}/.profile
-    echo export CARDANO_NODE_SOCKET_PATH=${CNODE_HOME}/db/socket >> ${HOME}/.profile
-    echo export CNODE_BUILD_NUM=${CNODE_BUILD_NUM} >> ${HOME}/.profile
-    echo export HOTKEY_PATH=${HOTKEY_PATH} >> ${HOME}/.profile
-    echo export TX_RAW_PATH=${TX_RAW_PATH} >> ${HOME}/.profile
-    source ${HOME}/.profile
+    echo export CNODE_PORT=${CNODE_PORT} >> ${HOME}/.bashrc
+    echo export NETWORK=${NETWORK} >> ${HOME}/.bashrc
+    echo export NODE_TYPE=${NODE_TYPE} >> ${HOME}/.bashrc
+    echo export POOL_NAME=${POOL_NAME} >> ${HOME}/.bashrc
+    echo export WORKSPACE=${WORKSPACE} >> ${HOME}/.bashrc
+    echo export CNODE_HOME=${CNODE_HOME} >> ${HOME}/.bashrc
+    echo export CARDANO_NODE_SOCKET_PATH=${CNODE_HOME}/db/socket >> ${HOME}/.bashrc
+    echo export CNODE_BUILD_NUM=${CNODE_BUILD_NUM} >> ${HOME}/.bashrc
+    echo export HOTKEY_PATH=${HOTKEY_PATH} >> ${HOME}/.bashrc
+    echo export TX_RAW_PATH=${TX_RAW_PATH} >> ${HOME}/.bashrc
+    source ${HOME}/.bashrc
 
     # Install libsodium
     export LIBSODIUM_CHECKOUT=66f017f1
@@ -219,10 +223,13 @@ fnInstallNode() {
     export BOOTSTRAP_HASKELL_NONINTERACTIVE=1
     export BOOTSTRAP_HASKELL_GHC_VERSION=8.10.4
     export BOOTSTRAP_HASKELL_CABAL_VERSION=3.4.0.0
+
+    # ghcup is an installer for the general purpose language Haskell
+    # https://www.haskell.org/ghcup/
     cd ${HOME} && \
     curl --proto '=https' --tlsv1.2 -sSf https://get-ghcup.haskell.org | sh
     
-    source ${HOME}/.profile && \
+    source ${HOME}/.bashrc && \
     chmod +x ${HOME}/.ghcup/bin/ghc && \
     chmod +x ${HOME}/.ghcup/bin/cabal && \
     ${HOME}/.ghcup/bin/ghcup upgrade && \
@@ -238,18 +245,18 @@ fnInstallNode() {
     cd cardano-node
     git fetch --all --recurse-submodules --tags
     CARDANO_NODE=$(git describe --tags `git rev-list --tags --max-count=1`)
-    echo export CARDANO_NODE=${CARDANO_NODE} >> ${HOME}/.profile
-    source ${HOME}/.profile
+    echo export CARDANO_NODE=${CARDANO_NODE} >> ${HOME}/.bashrc
+    source ${HOME}/.bashrc
     git checkout ${CARDANO_NODE}
     
     # Cardano Node - Build
     PATH=${HOME}/.cabal/bin:${HOME}/.ghcup/bin:${PATH}
     LD_LIBRARY_PATH=/usr/local/lib:${LD_LIBRARY_PATH}
     PKG_CONFIG_PATH=/usr/local/lib/pkgconfig:${PKG_CONFIG_PATH}
-    echo export PATH=${PATH} >> ${HOME}/.profile
-    echo export LD_LIBRARY_PATH=${LD_LIBRARY_PATH} >> ${HOME}/.profile
-    echo export PKG_CONFIG_PATH=${PKG_CONFIG_PATH} >> ${HOME}/.profile
-    source ${HOME}/.profile
+    echo export PATH=${PATH} >> ${HOME}/.bashrc
+    echo export LD_LIBRARY_PATH=${LD_LIBRARY_PATH} >> ${HOME}/.bashrc
+    echo export PKG_CONFIG_PATH=${PKG_CONFIG_PATH} >> ${HOME}/.bashrc
+    source ${HOME}/.bashrc
     cd ${WORKSPACE}/git/cardano-node
     ${HOME}/.ghcup/bin/cabal configure -O0 --with-ghc=${HOME}/.ghcup/bin/ghc
     echo -e "package cardano-crypto-praos\n flags: -external-libsodium-vrf" > cabal.project.local
@@ -265,17 +272,17 @@ fnInstallNode() {
     
     # Configure the nodes
     cd ${CNODE_HOME} && \
-    source ${HOME}/.profile  && \
+    source ${HOME}/.bashrc  && \
     wget -N https://hydra.iohk.io/build/${CNODE_BUILD_NUM}/download/1/${NETWORK}-byron-genesis.json && \
     wget -N https://hydra.iohk.io/build/${CNODE_BUILD_NUM}/download/1/${NETWORK}-topology.json && \
     wget -N https://hydra.iohk.io/build/${CNODE_BUILD_NUM}/download/1/${NETWORK}-shelley-genesis.json && \
     wget -N https://hydra.iohk.io/build/${CNODE_BUILD_NUM}/download/1/${NETWORK}-config.json && \
     sed -i ${CNODE_HOME}/${NETWORK}-config.json -e "s/TraceBlockFetchDecisions\": false/TraceBlockFetchDecisions\": true/g"
-    #sed -i ${CNODE_HOME}/${NETWORK}-config.json -e "s/\"minSeverity\": \"Info\"/\"minSeverity\": \"Error\"/g"
+    # (Removed for gLiveView to work): sed -i ${CNODE_HOME}/${NETWORK}-config.json -e "s/\"minSeverity\": \"Info\"/\"minSeverity\": \"Error\"/g"
 
     GEN_FILE=${CNODE_HOME}/${NETWORK}-shelley-genesis.json
-    echo export GEN_FILE=${GEN_FILE} >> ${HOME}/.profile
-    source ${HOME}/.profile
+    echo export GEN_FILE=${GEN_FILE} >> ${HOME}/.bashrc
+    source ${HOME}/.bashrc
     
     NW=$(jq '.networkId' -r "$GEN_FILE")
     NW_ID=$(jq '.networkMagic' -r "$GEN_FILE")
@@ -286,8 +293,8 @@ fnInstallNode() {
         MAGIC="--mainnet"
     fi
     
-    echo export MAGIC="\"${MAGIC}\"" >> ${HOME}/.profile
-    source ${HOME}/.profile
+    echo export MAGIC="\"${MAGIC}\"" >> ${HOME}/.bashrc
+    source ${HOME}/.bashrc
     
     # for relay nodes: It's possible to reduce memory and cpu usage by setting "TraceMempool" to "false" in mainnet-config.json
     if [ "$NODE_TYPE" = "relay" ]; then sed -i ${CNODE_HOME}/${NETWORK}-config.json -e "s/TraceMempool\": true/TraceMempool\": false/g"; fi
@@ -340,7 +347,7 @@ EOF
     systemctl enable cardano-node
     systemctl start cardano-node
     
-    # gLiveView: https://github.com/cardano-community/guild-operators/blob/master/docs/Scripts/gliveview.md
+    # Credits to the Guild Operators for creating gLiveView: https://github.com/cardano-community/guild-operators/blob/master/docs/Scripts/gliveview.md
     cd ${CNODE_HOME} && \
     cp files/gLiveView.sh ${CNODE_HOME}/gLiveView.sh  && \
     cp files/env ${CNODE_HOME}/env  && \
@@ -351,9 +358,12 @@ EOF
     -e "s/\#TOPOLOGY=\"\${CNODE_HOME}\/files\/topology.json\"/TOPOLOGY=\"\${CNODE_HOME}\/\${NETWORK}-topology.json\"/g" \
     -e "s/\CNODE_PORT=\"6000\"/CNODE_PORT=\"\${CNODE_PORT}\"/g"
     
+    echo "BEFORE CONTINUING YOU MUST WAIT TO SYNCONIZE YOUR NODE THIS MAY TAKE UP TO 10 HOURS"
+
     # Clear temp
     rm -fr /var/lib/apt/lists/{apt,dpkg,cache,log} /tmp/* /var/tmp/*
-    history -c && history -w
+
+    echo "Finished: Install node"
 }
 
 PS3="Select the operation: "

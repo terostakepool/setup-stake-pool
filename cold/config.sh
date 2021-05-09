@@ -1,20 +1,24 @@
 #!/bin/bash
 set -e
 
-# Create a 24-word length shelley compatible mnemonic with Daedalus or Yoroi on a offline machine preferred.
-export MNEMONIC="example example example example example example example example example example example example example example example example example example example example example example example example"
+# Create a 24-word length shelley compatible mnemonic with Daedalus or Yoroi 
+# on a offline machine preferred.
+export MNEMONIC="word1 word2 word3 word4 ..."
 
 export NETWORK=testnet
-export NW_ID=1097911063
+export NW_ID=1097911063 # only for testnet
 
 export METADATA_URI="https://www.example.com/metadata.json"
 
-export MARGIN=0.020
-export MIN_POOL_COST=340000000
-export PLEDGE=1000000000
+export MARGIN=0.020 # 0.020 = % 2
+export MIN_POOL_COST=340000000 # 340 ADA
+export PLEDGE=1000000000 # 1000 ADA
 
+# Create a DNS A record to resolve the IP of your relays
 export RELAY_HOST=relaynode1.example.com
 export RELAY_PORT=6000
+# TODO: configure more than one relay
+
 
 ######################################
 # Do NOT modify code below           #

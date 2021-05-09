@@ -25,7 +25,7 @@ fnUpdateCert() {
     --pool-metadata-file ${HOME}/poolMetaData.json > ${HOME}/poolMetaDataHash.txt
     
     cardano-cli stake-pool registration-certificate \
-    --cold-verification-key-file ${COLDKEY_PATH}/node.vkey \
+    --cold-verification-key-file ${COLDKEY_PATH}/cold.vkey \
     --vrf-verification-key-file ${HOTKEY_PATH}/vrf.vkey \
     --pool-pledge ${PLEDGE} \
     --pool-cost ${MIN_POOL_COST} \
@@ -41,7 +41,7 @@ fnUpdateCert() {
     
     cardano-cli stake-address delegation-certificate \
     --stake-verification-key-file ${COLDKEY_PATH}/stake.vkey \
-    --cold-verification-key-file ${COLDKEY_PATH}/node.vkey \
+    --cold-verification-key-file ${COLDKEY_PATH}/cold.vkey \
     --out-file ${HOTKEY_PATH}/deleg-${ID_CERT}.cert
     
     fnColdHotTransfer change-certificate
@@ -62,7 +62,7 @@ fnUpdateCertSign() {
     cardano-cli transaction sign \
     --tx-body-file ${TX_RAW_PATH}/tx-update-certificate-${ID_CERT}.raw \
     --signing-key-file ${COLDKEY_PATH}/payment.skey \
-    --signing-key-file ${COLDKEY_PATH}/node.skey \
+    --signing-key-file ${COLDKEY_PATH}/cold.skey \
     --signing-key-file ${COLDKEY_PATH}/stake.skey \
     ${MAGIC} \
     --out-file ${TX_RAW_PATH}/tx-update-certificate-${ID_CERT}.signed

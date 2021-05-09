@@ -11,7 +11,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # Refresh
-source ${HOME}/.profile
+source ${HOME}/.bashrc
 
 cd ${CNODE_HOME}
 

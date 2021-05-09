@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-source ${HOME}/.profile
+source ${HOME}/.bashrc
 
 confirm() {
     # call with a prompt string or use a default
@@ -108,11 +108,11 @@ EOF
 
 PS3="Select the operation: "
 
-select opt in topology-updater relay-topology-pull quit; do
+select opt in "Topology Updater" "Relay topology pull" quit; do
     case $opt in
-        topology-updater)
+        "Topology Updater")
         fnTopologyUpdater;;
-        relay-topology-pull)
+        "Relay topology pull")
         fnRelayTopologyPull;;
         quit)
         break;;

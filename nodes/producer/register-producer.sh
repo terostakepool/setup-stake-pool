@@ -7,7 +7,7 @@ if [[ $EUID -ne 0 ]]; then
 fi
 
 # Refresh
-source ${HOME}/.profile
+source ${HOME}/.bashrc
 
 cd ${CNODE_HOME}
 
@@ -60,7 +60,10 @@ fnHotColdTransfer() {
    7z t ${HOT_TRANSFER_PATH}/hot-to-cold-${name}-${timestamp}.7z
 }
 
+# Generate KES
 initKES() {
+    echo "Generate KES"
+
     # Determine the number of slots per KES period from the genesis file.
     slotsPerKESPeriod=$(cat $CNODE_HOME/${NETWORK}-shelley-genesis.json | jq -r '.slotsPerKESPeriod')
     echo slotsPerKESPeriod: ${slotsPerKESPeriod}
@@ -73,8 +76,9 @@ initKES() {
 
     echo ${startKesPeriod} > ${HOTKEY_PATH}/startKesPeriod.out
 
-    read -rsp $'Press enter to continue...\n'
+    confirm
 
+    # Create a backup before changing any important files
     fnDRP
 
     # Stake pool hot key (kes.skey)
@@ -82,17 +86,24 @@ initKES() {
     --verification-key-file ${HOTKEY_PATH}/kes.vkey \
     --signing-key-file ${HOTKEY_PATH}/kes.skey
 
-    echo "Securing files (startKesPeriod.out | kes.vkey) for transfer to cold environment"
+    echo "Encrypt files using 7-Zip for transfer to cold environment"
+    echo "Files added: startKesPeriod.out | kes.vkey"
     fnHotColdTransfer kes
+
+    echo "Finished: Generate KES"
 }
 
+# Configure keys and cert to start producer mode
 startNodeCert() {
+    echo "Configure keys and cert to (Start producer mode)"
+
     # Stake pool cold key (node.cert)
     while true ; do
-        read -rsp "Load file \"${HOTKEY_PATH}/node.cert\" and press enter to continue..."$'\n'
+        read -rsp "Required file: \"${HOTKEY_PATH}/node.cert\" and press enter to continue..."$'\n'
         test -f "${HOTKEY_PATH}/node.cert" && break
     done
 
+    # Create a backup before changing any important files
     fnDRP
 
     # Stake pool VRF key (vrf.skey)
@@ -118,26 +129,31 @@ VRF=${HOTKEY_PATH}/vrf.skey
 CERT=${HOTKEY_PATH}/node.cert
 cardano-node run --topology \${TOPOLOGY} --database-path \${DB_PATH} --socket-path \${SOCKET_PATH} --host-addr \${HOSTADDR} --port \${PORT} --config \${CONFIG} --shelley-kes-key \${KES} --shelley-vrf-key \${VRF} --shelley-operational-certificate \${CERT}
 EOF
-
+    sleep 5
     systemctl start cardano-node
-    
+    sleep 5
     systemctl status cardano-node
+
+    echo "Finished: Start producer mode"
 }
 
-# Register your stake address
+# Register stake address
 registerStakeAddress () {
+    echo "Register stake address"
+
     while true ; do
-        read -rsp "Load file \"${HOTKEY_PATH}/payment.addr\" and press enter to continue..."$'\n'
+        read -rsp "Required file: \"${HOTKEY_PATH}/payment.addr\" and press enter to continue..."$'\n'
         test -f "${HOTKEY_PATH}/payment.addr" && break
     done
     
     while true ; do
-        read -rsp "Load file \"${HOTKEY_PATH}/stake.cert\" and press enter to continue..."$'\n'
+        read -rsp "Required file: \"${HOTKEY_PATH}/stake.cert\" and press enter to continue..."$'\n'
         test -f "${HOTKEY_PATH}/stake.cert" && break
     done
 
+    # Create a backup before changing any important files
     fnDRP
-    
+
     cardano-cli query protocol-parameters ${MAGIC} --out-file ${CNODE_HOME}/params.json
     cardano-cli query utxo --address $(cat ${HOTKEY_PATH}/payment.addr) ${MAGIC}
     
@@ -168,9 +184,11 @@ registerStakeAddress () {
     echo Number of UTXOs: ${txcnt}
     
     stakeAddressDeposit=$(cat ${CNODE_HOME}/params.json | jq -r '.stakeAddressDeposit')
+    # Deposit to start delegation - 2 ADA
     echo stakeAddressDeposit: $stakeAddressDeposit
-    
-    # Run the build-raw transaction command:
+    # TODO: Will it be necessary to check if you have already paid the deposit to delegate?
+
+    # Run the build-raw transaction to calculate fee
     cardano-cli transaction build-raw \
     ${tx_in} \
     --tx-out $(cat ${HOTKEY_PATH}/payment.addr)+0 \
@@ -179,7 +197,7 @@ registerStakeAddress () {
     --out-file ${TX_RAW_PATH}/tx-payment-stake.tmp \
     --certificate-file ${HOTKEY_PATH}/stake.cert
     
-    # Calculate the current minimum fee:
+    # Calculate the current minimum fee
     fee=$(cardano-cli transaction calculate-min-fee \
         --tx-body-file ${TX_RAW_PATH}/tx-payment-stake.tmp \
         --tx-in-count ${txcnt} \
@@ -193,10 +211,12 @@ registerStakeAddress () {
     # Calculate your change output:
     txOut=$((${total_balance}-${stakeAddressDeposit}-${fee}))
     echo Change Output: ${txOut}
-    
+    # TODO: Format numbers as currency: X.XXXXXX ADA
+
     confirm
 
-    # Build your transaction which will register your stake address:
+    # Build your transaction which will register your stake address
+    # Certificate file: stake.cert
     cardano-cli transaction build-raw \
     ${tx_in} \
     --tx-out $(cat ${HOTKEY_PATH}/payment.addr)+${txOut} \
@@ -205,18 +225,23 @@ registerStakeAddress () {
     --certificate-file ${HOTKEY_PATH}/stake.cert \
     --out-file ${TX_RAW_PATH}/tx-payment-stake.raw
 
-    echo "Securing file (tx-payment-stake.raw) for transfer to cold environment"
+    echo "Encrypt files using 7-Zip for transfer to cold environment"
+    echo "Files added: tx-payment-stake.raw"
     fnHotColdTransfer payment-stake
+
+    echo "Finished: Register stake address"
 }
 
 submitStakeAddress() {
+    echo "Submit the transaction to record your stake address"
+    echo "${TX_RAW_PATH}/tx-payment-stake.signed"
     confirm
 
     while true ; do
-        read -rsp "Load file \"${TX_RAW_PATH}/tx-payment-stake.signed\" and press enter to continue..."$'\n'
+        read -rsp "Required file: \"${TX_RAW_PATH}/tx-payment-stake.signed\" and press enter to continue..."$'\n'
         test -f "${TX_RAW_PATH}/tx-payment-stake.signed" && break
     done
-    
+
     cardano-cli transaction submit \
     --tx-file ${TX_RAW_PATH}/tx-payment-stake.signed \
     ${MAGIC}
@@ -224,16 +249,20 @@ submitStakeAddress() {
 
 # Register your stake pool
 registerStakePool() {
+
+    echo "Register stake pool"
+
     while true ; do
-        read -rsp "Load file \"${HOTKEY_PATH}/pool.cert\" and press enter to continue..."$'\n'
+        read -rsp "Required file: \"${HOTKEY_PATH}/pool.cert\" and press enter to continue..."$'\n'
         test -f "${HOTKEY_PATH}/pool.cert" && break
     done
     
     while true ; do
-        read -rsp "Load file \"${HOTKEY_PATH}/deleg.cert\" and press enter to continue..."$'\n'
+        read -rsp "Required file: \"${HOTKEY_PATH}/deleg.cert\" and press enter to continue..."$'\n'
         test -f "${HOTKEY_PATH}/deleg.cert" && break
     done
     
+    # Create a backup before changing any important files
     fnDRP
 
     currentSlot=$(cardano-cli query tip ${MAGIC} | jq -r '.slot')
@@ -263,8 +292,11 @@ registerStakePool() {
     echo Number of UTXOs: ${txcnt}
     
     stakePoolDeposit=$(cat ${CNODE_HOME}/params.json | jq -r '.stakePoolDeposit')
+    # Deposit to register pool - 500 ADA
     echo stakePoolDeposit: $stakePoolDeposit
-    
+    # TODO: Will it be possible to verify if it has already been paid?
+
+    # Run the build-raw transaction to calculate fee
     cardano-cli transaction build-raw \
     ${tx_in} \
     --tx-out $(cat ${HOTKEY_PATH}/payment.addr)+$(( ${total_balance} - ${stakePoolDeposit}))  \
@@ -273,7 +305,8 @@ registerStakePool() {
     --certificate-file ${HOTKEY_PATH}/pool.cert \
     --certificate-file ${HOTKEY_PATH}/deleg.cert \
     --out-file ${TX_RAW_PATH}/tx-registration-certificate.tmp
-    
+
+    # Calculate the current minimum fee
     fee=$(cardano-cli transaction calculate-min-fee \
         --tx-body-file ${TX_RAW_PATH}/tx-registration-certificate.tmp \
         --tx-in-count ${txcnt} \
@@ -283,12 +316,14 @@ registerStakePool() {
         --byron-witness-count 0 \
     --protocol-params-file ${CNODE_HOME}/params.json | awk '{ print $1 }')
     echo fee: $fee
-    
+
     txOut=$((${total_balance}-${stakePoolDeposit}-${fee}))
     echo txOut: ${txOut}
-    
+
     confirm
-    
+
+    # Build your transaction which will register your stake pool:
+    # Certificate files: pool.cert and deleg.cert
     cardano-cli transaction build-raw \
     ${tx_in} \
     --tx-out $(cat ${HOTKEY_PATH}/payment.addr)+${txOut} \
@@ -298,15 +333,20 @@ registerStakePool() {
     --certificate-file ${HOTKEY_PATH}/deleg.cert \
     --out-file ${TX_RAW_PATH}/tx-registration-certificate.raw
 
-    echo "Securing file (tx-registration-certificate.raw) for transfer to cold environment"
+    echo "Encrypt files using 7-Zip for transfer to cold environment"
+    echo "Files added: tx-registration-certificate.raw"
     fnHotColdTransfer registration-certificate
+
+    echo "Finished: Register stake pool"
 }
 
 submitStakePool () {
+    echo "Submit the transaction to record your stake pool"
+    echo "${TX_RAW_PATH}/tx-registration-certificate.signed"
     confirm
 
     while true ; do
-        read -rsp "Load file \"${TX_RAW_PATH}/tx-registration-certificate.signed\" and press enter to continue..."$'\n'
+        read -rsp "Required file: \"${TX_RAW_PATH}/tx-registration-certificate.signed\" and press enter to continue..."$'\n'
         test -f "${TX_RAW_PATH}/tx-registration-certificate.signed" && break
     done
     
@@ -316,6 +356,7 @@ submitStakePool () {
 }
 
 updateTopology() {
+    # TODO: Ask if you want to add another relay
     read -p "Enter relay ip: " RELAY_IP
     RELAY_IP=${RELAY_IP:-"127.0.0.1"}
     echo ${RELAY_IP}
@@ -338,9 +379,9 @@ EOF
 
     cat ${CNODE_HOME}/${NETWORK}-topology.json
 
-    systemctl stop cardano-node
     echo "Rebooting..."
-    sleep 15
+    systemctl stop cardano-node
+    sleep 5
     systemctl start cardano-node
     sleep 5
     systemctl status cardano-node
@@ -348,12 +389,12 @@ EOF
 
 PS3="Select the operation: "
 
-select opt in "Generate KES" "Start node sync" "Register stake address" "Submit stake address" "Register stake pool" "Submit stake pool" "EXIT"; do
+select opt in "Generate KES" "Start producer mode" "Register stake address" "Submit stake address" "Register stake pool" "Submit stake pool" "Topology Updater" "EXIT"; do
     case $opt in
         "Generate KES")
         initKES;;
 
-        "Start node sync")
+        "Start producer mode")
         startNodeCert;;
 
         "Register stake address")
@@ -367,6 +408,9 @@ select opt in "Generate KES" "Start node sync" "Register stake address" "Submit 
 
         "Submit stake pool")
         submitStakePool;;
+
+        "Topology Updater")
+        updateTopology;;
 
         "EXIT")
         break;;
