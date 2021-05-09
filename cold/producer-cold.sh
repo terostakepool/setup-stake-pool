@@ -121,7 +121,7 @@ fnGenerateColdKey () {
 }
 
 fnStakeAddressSign () {
-    echo "Sign skate account"
+    echo "Sign stake account"
     
     while true ; do
         read -rsp "Required file: \"${TX_RAW_PATH}/tx-payment-stake.raw\" and press enter to continue..."$'\n'
@@ -142,7 +142,7 @@ fnStakeAddressSign () {
     echo "Files added: tx-payment-stake.signed"
     fnColdHotTransfer tx-payment-stake-signed
 
-    echo "Finished: Sign skate account"
+    echo "Finished: Sign stake account"
 }
 
 fnRegistrationCertificate () {
@@ -231,7 +231,7 @@ fnCheckPoolId () {
 
 PS3="Select the operation: "
 
-select opt in "Install 7z" "Generate stake keys" "Sign skate account" "Register pool certificate" "Sign pool certificate" "Get Pool Id" "Renew KES" "Backup" "EXIT"; do
+select opt in "Install 7z" "Generate stake keys" "Sign stake account" "Register pool certificate" "Sign pool certificate" "Get Pool Id" "Renew KES" "Backup" "EXIT"; do
     case $opt in
         "Install 7z")
         fnPackages7z;;
@@ -239,7 +239,7 @@ select opt in "Install 7z" "Generate stake keys" "Sign skate account" "Register 
         "Generate stake keys")
         fnGenerateColdKey;;
 
-        "Sign skate account")
+        "Sign stake account")
         fnStakeAddressSign;;
 
         "Register pool certificate")

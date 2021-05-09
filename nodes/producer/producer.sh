@@ -227,7 +227,7 @@ registerStakeAddress () {
 
     echo "Encrypt files using 7-Zip for transfer to cold environment"
     echo "Files added: tx-payment-stake.raw"
-    fnHotColdTransfer payment-stake
+    fnHotColdTransfer tx-payment-stake
 
     echo "Finished: Register stake address"
 }
@@ -335,7 +335,7 @@ registerStakePool() {
 
     echo "Encrypt files using 7-Zip for transfer to cold environment"
     echo "Files added: tx-registration-certificate.raw"
-    fnHotColdTransfer registration-certificate
+    fnHotColdTransfer tx-registration-certificate
 
     echo "Finished: Register stake pool"
 }
@@ -411,6 +411,9 @@ select opt in "Generate KES" "Start producer mode" "Register stake address" "Sub
 
         "Topology Updater")
         updateTopology;;
+
+        "Create backup")
+        fnDRP;;
 
         "EXIT")
         break;;
