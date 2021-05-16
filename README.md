@@ -2,8 +2,8 @@
 
 Help scripts to build a Cardano Stake Pool.
 
- This script is under development to use at your own risk.  
- We always recommend trying it first on the testnet
+> This script is under development to use at your own risk.  
+> We always recommend trying it first on the testnet
 
 #### - Install nodes
 
@@ -60,6 +60,6 @@ Feature requests are best opened as a [discussion thread](https://github.com/ter
 ### Collaboration
 
 If you want to support me please feel free to send some ADA to:  
-*addr1qy906qf9lqsxj2nquwy6uzwwha7av60kude42hk2tasm3hmzmhrpy6cpu4p0rvyrnc56yyrjclzyd2fc2accmvwwqm8qlfc5el*
+<span style="font-size:12px;">*addr1qy906qf9lqsxj2nquwy6uzwwha7av60kude42hk2tasm3hmzmhrpy6cpu4p0rvyrnc56yyrjclzyd2fc2accmvwwqm8qlfc5el*</span>
 
 or delegate your stake to my stake pool [TERO](https://adapools.org/pool/07175f6efa70645146007138a4fdd00b9e8db2a73baecdd704ebccfd) — thanks!
