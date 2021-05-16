@@ -6,14 +6,15 @@ if [[ $EUID -ne 0 ]]; then
     exit 1
 fi
 
+source ${HOME}/.bashrc
 cd ${WORKSPACE}/git
 git clone https://github.com/input-output-hk/cardano-node.git cardano-node-1.27.0
 cd cardano-node-1.27.0/
 cabal update
 git fetch --all --recurse-submodules --tags
 CARDANO_NODE=$(git describe --tags `git rev-list --tags --max-count=1`)
-echo export CARDANO_NODE=${CARDANO_NODE} >> ${HOME}/.profile
-source ${HOME}/.profile
+echo export CARDANO_NODE=${CARDANO_NODE} >> ${HOME}/.bashrc
+source ${HOME}/.bashrc
 git checkout ${CARDANO_NODE}
 ${HOME}/.ghcup/bin/cabal configure -O0 --with-ghc=${HOME}/.ghcup/bin/ghc
 echo -e "package cardano-crypto-praos\n flags: -external-libsodium-vrf" > cabal.project.local
